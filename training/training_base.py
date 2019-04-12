@@ -90,8 +90,8 @@ class training_base(object):
         parser.add_argument("--gpufraction",  help="select memory fraction for GPU",   type=float, metavar="OPT", default=-1)
         parser.add_argument("--submitbatch",  help="submits the job to condor" , default=False, action="store_true")
         parser.add_argument("--walltime",  help="sets the wall time for the batch job, format: 1d5h or 2d or 3h etc" , default='1d')
-        parser.add_argument("--isbatchrun",   help="is batch run", default=False, action="store_true")
-        
+        parser.add_argument("--isbatchrun",   help="is batch run", default=False, action="store_true")        
+        parser.add_argument("--datafraction",  help="fraction of dataset",   type=float, metavar="OPT", default=1.0)
         
         args = parser.parse_args()
         self.args = args
@@ -195,7 +195,10 @@ class training_base(object):
         self.train_data = collection_class()
         self.train_data.readFromFile(self.inputData)
         self.train_data.useweights=useweights
-        
+
+        if args.datafraction>0 and args.datafraction<1:
+            self.train_data.split(args.datafraction)
+
         if testrun:
             self.train_data.split(testrun_fraction)
             self.val_data=self.train_data
