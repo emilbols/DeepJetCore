@@ -58,6 +58,7 @@ class training_base(object):
         parser.add_argument('--modelMethod', help='Method to be used to instantiate model in derived training class', metavar='OPT', default=None)
         parser.add_argument("--gpu",  help="select specific GPU",   type=int, metavar="OPT", default=-1)
         parser.add_argument("--gpufraction",  help="select memory fraction for GPU",   type=float, metavar="OPT", default=-1)
+        parser.add_argument("--datafraction",  help="fraction of dataset",   type=float, metavar="OPT", default=1.0)
         
         args = parser.parse_args()
         self.args = args
@@ -138,7 +139,10 @@ class training_base(object):
         self.train_data = collection_class()
         self.train_data.readFromFile(self.inputData)
         self.train_data.useweights=useweights
-        
+
+        if args.datafraction>0 and args.datafraction<1:
+            self.train_data.split(args.datafraction)
+
         if testrun:
             self.train_data.split(0.002)
             

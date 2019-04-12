@@ -44,13 +44,12 @@ def checkTokens(cutofftime_hours=48):
     
     kdate=klist[firstrenewapp+2]
     ktime=klist[firstrenewapp+3]
-    
-    
+
     import datetime
     thistime=datetime.datetime.now()
-    tokentime=datetime.datetime(2000+int(kdate.split('/')[2]) ,
-                                int(kdate.split('/')[0]),
-                                int(kdate.split('/')[1]),
+    tokentime=datetime.datetime(int(kdate.split('-')[0]) ,
+                                int(kdate.split('-')[1]),
+                                int(kdate.split('-')[2]),
                                 int(ktime.split(':')[0]))
     diff=tokentime-thistime
     diff=diff.total_seconds()

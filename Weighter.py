@@ -167,7 +167,7 @@ class Weighter(object):
             ratio[ratio<0]=1
             ratio[ratio==numpy.nan]=1
             weighthists.append(ratio)
-            ratio=1-ratio#make it a remove probability
+            ratio=1-ratio
             probhists.append(ratio)
         
         self.removeProbabilties=probhists
@@ -180,7 +180,7 @@ class Weighter(object):
     
         
         
-    def createNotRemoveIndices(self,Tuple):
+    def createNotRemoveIndices(self,Tuple,lightjet_purge = False):
         import numpy
         if len(self.removeProbabilties) <1:
             print('removeProbabilties bins not initialised. Cannot create indices per jet')
@@ -201,8 +201,6 @@ class Weighter(object):
             norm.append(0)
             yaverage.append(0)
             
-        
-
         for jet in iter(Tuple[self.Axixandlabel]):
             binX =  self.getBin(jet[self.nameX], self.axisX)
             binY =  self.getBin(jet[self.nameY], self.axisY)
@@ -211,7 +209,12 @@ class Weighter(object):
                 if  useonlyoneclass or 1 == jet[classs]:
                     rand=numpy.random.ranf()
                     prob = self.removeProbabilties[index][binX][binY]
-                    
+                    if lightjet_purge and (classs == 'isG'):
+                        print('removing extra glue')
+                        rand = rand*0.2
+                    if lightjet_purge and (classs == 'isUD' or classs == 'isS'):
+                        rand = rand*0.5
+                        print('removing extra glue')
                     if rand < prob and index != self.refclassidx:
                         #print('rm  ',index,self.refclassidx,jet[classs],classs)
                         notremove[counter]=0
