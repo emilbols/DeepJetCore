@@ -189,7 +189,7 @@ class Weighter(object):
     
         
         
-    def createNotRemoveIndices(self,Tuple,lightjet_purge = False):
+    def createNotRemoveIndices(self,Tuple,glue_removal=False):
         import numpy
         if len(self.removeProbabilties) <1:
             print('removeProbabilties bins not initialised. Cannot create indices per jet')
@@ -209,7 +209,7 @@ class Weighter(object):
             xaverage.append(0)
             norm.append(0)
             yaverage.append(0)
-            
+
         for jet in iter(Tuple[self.Axixandlabel]):
             binX =  self.getBin(jet[self.nameX], self.axisX)
             binY =  self.getBin(jet[self.nameY], self.axisY)
@@ -218,12 +218,8 @@ class Weighter(object):
                 if  useonlyoneclass or 1 == jet[classs]:
                     rand=np.random.ranf()
                     prob = self.removeProbabilties[index][binX][binY]
-                    if lightjet_purge and (classs == 'isG'):
-                        print('removing extra glue')
-                        rand = rand*0.2
-                    if lightjet_purge and (classs == 'isUD' or classs == 'isS'):
-                        rand = rand*0.5
-                        print('removing extra glue')
+                    if (classs == 'isG') & glue_removal:
+                        rand = rand*0.4
                     if rand < prob and index != self.refclassidx:
                         #print('rm  ',index,self.refclassidx,jet[classs],classs)
                         notremove[counter]=0

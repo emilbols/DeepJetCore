@@ -303,6 +303,9 @@ class DataCollection(object):
         shutil.move(fd.name, filename)
         
     def readFromFile(self,filename):
+        import pickle
+        import sys
+        print(filename)
         fd=open(filename,'rb')
         self.samples=pickle.load(fd)
         self.sampleentries=pickle.load(fd)
