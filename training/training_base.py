@@ -16,6 +16,7 @@ from DeepJetCore.DJCLosses import *
 from DeepJetCore.DJCLayers import *
 from pdb import set_trace
 from keras.utils import multi_gpu_model
+import numpy as np
 
 import imp
 try:
@@ -309,9 +310,9 @@ class training_base(object):
         if not self.custom_optimizer:
             from keras.optimizers import Adam
             if clipnorm:
-                self.optimizer = Adam(lr=self.startlearningrate,clipnorm=clipnorm)
+                self.optimizer = Adam(lr=self.startlearningrate,beta_1=0.9, beta_2=0.999,clipnorm=clipnorm)
             else:
-                self.optimizer = Adam(lr=self.startlearningrate)
+                self.optimizer = Adam(lr=self.startlearningrate,beta_1=0.9, beta_2=0.999)
             
             
         if self.GAN_mode:
@@ -403,9 +404,11 @@ class training_base(object):
         self.val_data.setBatchSize(batchsize)
         
         averagesamplesperfile=self.train_data.getAvEntriesPerFile()
+        print('average samples per file'+str(averagesamplesperfile))
         samplespreread=maxqsize*batchsize
         nfilespre=max(int(samplespreread/averagesamplesperfile),2)
         nfilespre+=1
+
         nfilespre=min(nfilespre, len(self.train_data.samples)-1)
         #if nfilespre>15:nfilespre=15
         print('best pre read: '+str(nfilespre)+'  a: '+str(int(averagesamplesperfile)))
@@ -466,13 +469,14 @@ class training_base(object):
             self.callbacks.callbacks.extend(additional_callbacks)
         
         print('starting training')
-        self.keras_model.fit_generator(self.train_data.generator() ,
+        print('steps per epoch = '+str(self.train_data.getNBatchesPerEpoch()))
+        self.keras_model.fit_generator(self.train_data.generator(flag='train') ,
                             steps_per_epoch=self.train_data.getNBatchesPerEpoch(), 
                             epochs=nepochs-self.trainedepoches,
                             callbacks=self.callbacks.callbacks,
-                            validation_data=self.val_data.generator(),
+                            validation_data=self.val_data.generator(flag='val'),
                             validation_steps=self.val_data.getNBatchesPerEpoch(), #)#,
-                            max_q_size=maxqsize,**trainargs)
+                            max_queue_size=maxqsize,**trainargs)
         
         self.trainedepoches=nepochs
         self.saveModel("KERAS_model.h5")
@@ -485,6 +489,81 @@ class training_base(object):
         
         return self.keras_model, self.callbacks.history
     
+    def trainModel_noGen(self,
+                         nepochs,
+                         batchsize,
+                         stop_patience=-1, 
+                         lr_factor=0.5,
+                         lr_patience=-1, 
+                         lr_epsilon=0.003, 
+                         lr_cooldown=6, 
+                         lr_minimum=0.000001,
+                         maxqsize=5, 
+                         checkperiod=10,
+                         additional_plots=None,
+                         additional_callbacks=None,
+                         **trainargs):
+        
+        from sklearn.model_selection import train_test_split
+        # check a few things, e.g. output dimensions etc.
+        # need implementation, but probably TF update SWAPNEEL
+        customtarget=self.train_data.getCustomPredictionLabels()
+        if customtarget:
+            pass
+            # work on self.model.outputs
+            # check here if the output dimension of the model fits the custom labels
+        
+        # write only after the output classes have been added
+        self._initTraining(nepochs,batchsize,maxqsize)
+        
+        #self.keras_model.save(self.outputDir+'KERAS_check_last_model.h5')
+        print('setting up callbacks')
+        from .DeepJet_callbacks import DeepJet_callbacks
+        
+        
+        self.callbacks=DeepJet_callbacks(self.keras_model,
+                                    stop_patience=stop_patience, 
+                                    lr_factor=lr_factor,
+                                    lr_patience=lr_patience, 
+                                    lr_epsilon=lr_epsilon, 
+                                    lr_cooldown=lr_cooldown, 
+                                    lr_minimum=lr_minimum,
+                                    outputDir=self.outputDir,
+                                    checkperiod=checkperiod,
+                                    checkperiodoffset=self.trainedepoches,
+                                    additional_plots=additional_plots)
+        
+        if additional_callbacks is not None:
+            if not isinstance(additional_callbacks, list):
+                additional_callbacks=[additional_callbacks]
+            self.callbacks.callbacks.extend(additional_callbacks)
+        
+        print('starting training')
+        print('steps per epoch = '+str(self.train_data.getNBatchesPerEpoch()))
+
+        print('make features')
+        X_train = self.train_data.getAllFeatures()
+        X_test = self.val_data.getAllFeatures()
+        print('make truth')
+        Y_train = self.train_data.getAllLabels()
+        Y_test = self.val_data.getAllLabels()
+        
+
+        self.keras_model.fit(X_train, Y_train, batch_size=batchsize, epochs=nepochs,
+                            callbacks=self.callbacks.callbacks,
+                             validation_data=(X_test, Y_test),
+                            **trainargs)
+        
+        self.trainedepoches=nepochs
+        self.saveModel("KERAS_model.h5")
+        
+        import copy
+        #reset all file reads etc
+        tmpdc=copy.deepcopy(self.train_data)
+        del self.train_data
+        self.train_data=tmpdc
+        
+        return self.keras_model, self.callbacks.history
     
     
     def trainGAN_exp(self,
