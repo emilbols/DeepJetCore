@@ -801,7 +801,7 @@ class DataCollection(object):
                 if self.max < 1:
                     raise ValueError('I got an invalid number of files to open (%d)' % self.max)
                 for i in range(self.max):
-                    self.__readNext()
+                    #self.__readNext()
                     time.sleep(1)
                     
             
@@ -818,8 +818,9 @@ class DataCollection(object):
                     excounter=0
                     while excounter<10:
                         try:
-                            self.tdlist[counter].readIn_async(filename,ramdiskpath='/dev/shm/',
-                                                              randomseed=shuffleseed)
+                            #self.tdlist[counter].readIn_async(filename,ramdiskpath='/dev/shm/',
+                            #                                  randomseed=shuffleseed)
+                            self.tdlist[counter].readIn(filename)
                             break
                         except Exception as d:
                             print(self.filelist[counter]+' read error, retry...')
@@ -831,12 +832,12 @@ class DataCollection(object):
                             traceback.print_exc(file=sys.stdout)
                             raise d
                     
-                t=threading.Thread(target=startRead, args=(self.nextcounter,readfilename,self.shuffleseed))    
-                t.start()
+                #t=threading.Thread(target=startRead, args=(self.nextcounter,readfilename,self.shuffleseed))    
+                #t.start()
                 self.shuffleseed+=1
                 if self.shuffleseed>1e5:
                     self.shuffleseed=0
-                #startRead(self.nextcounter,readfilename,self.shuffleseed)
+                startRead(self.nextcounter,readfilename,self.shuffleseed)
                 self.tdopen[self.nextcounter]=True
                 self.filecounter=self.__increment(self.filecounter,self.nfiles,to_shuffle=True)
                 self.nextcounter=self.__increment(self.nextcounter,self.nfiles)
@@ -845,7 +846,7 @@ class DataCollection(object):
                 
             def __getLast(self):
                 #print('joining...') #DEBUG PERF
-                self.tdlist[self.lastcounter].readIn_join(wasasync=True,waitforStart=True)
+                #self.tdlist[self.lastcounter].readIn_join(wasasync=True,waitforStart=True)
                 #print('joined') #DEBUG PERF
                 td=self.tdlist[self.lastcounter]
                 #print('got ',self.lastcounter)
@@ -880,9 +881,9 @@ class DataCollection(object):
                 self.filecounter=0
                 
             def get(self):
-                
-                td=self.__getLast()
+
                 self.__readNext()
+                td=self.__getLast()                
                 return td
                 
         
@@ -905,7 +906,6 @@ class DataCollection(object):
         nextfiletoread=0
         
         target_xlistlength=len(td.getInputShapes())
-        
         xout=[]
         yout=[]
         wout=[]
@@ -932,6 +932,9 @@ class DataCollection(object):
         nepoch=0
         shufflecounter=0
         shufflecounter2=0
+        last_batch = 0
+        diff_count=0
+        id_count=0
         while 1:
             if processedbatches == totalbatches:
                 processedbatches=0
@@ -954,8 +957,6 @@ class DataCollection(object):
                 lastbatchrest=xstored[0].shape[0]
             
             batchcomplete=False
-            
-            
             
             if lastbatchrest >= self.__batchsize:
                 batchcomplete = True
@@ -1082,11 +1083,12 @@ class DataCollection(object):
                     xout.append(batchgen.generateBatch())
                 else:
                     xout[-1]=batchgen.generateBatch()
-                    
-            
             if self.useweights:
                 yield (xout,yout,wout)
             else:
+                print('yielded batch' + str(processedbatches))
+                print('\n')
+                print(yout[0][0])
                 yield (xout,yout)
             
             
