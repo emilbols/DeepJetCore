@@ -58,6 +58,21 @@ class newline_callbacks_begin(Callback):
         self.full_logs=[]
         self.plotLoss=plotLoss
         
+
+    def on_batch_end(self,batch,batch_logs={}):
+        import os
+        blossfile=os.path.join( self.outputDir, 'batch_losses.log')
+        print(batch_logs.get('loss'))
+        self.loss.append(batch_logs.get('loss'))
+        self.val_loss.append(batch_logs.get('val_loss'))
+        f = open(blossfile, 'a')
+        f.write(str(batch_logs.get('loss')))
+        f.write(" ")
+        f.write(str(batch_logs.get('val_loss')))
+        f.write("\n")
+        f.close()    
+
+
     def on_epoch_end(self,epoch, epoch_logs={}):
         import os
         lossfile=os.path.join( self.outputDir, 'losses.log')
@@ -259,7 +274,7 @@ class PredictCallback(Callback):
         if not self.run_on_epoch_end: return
         self.predict_and_call(epoch)
         
-    def on_batch_end(self, batch, logs=None):
+    def on_batch_end(self, batch, batch_logs=None):
         if self.after_n_batches<=0: return
         self.counter+=1
         if self.counter>self.after_n_batches: 
