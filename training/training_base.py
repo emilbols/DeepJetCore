@@ -15,7 +15,7 @@ from DeepJetCore.DataCollection import DataCollection
 from DeepJetCore.DJCLosses import *
 from DeepJetCore.DJCLayers import *
 from pdb import set_trace
-from keras.utils import multi_gpu_model
+#from keras.utils import multi_gpu_model
 
 import imp
 try:
@@ -47,22 +47,22 @@ custom_objects_list.update(global_metrics_list)
 
 ##helper
 
-from keras import Model
-class ModelMGPU(Model):
-    def __init__(self, ser_model, gpus):
-        pmodel = multi_gpu_model(ser_model, gpus)
-        self.__dict__.update(pmodel.__dict__)
-        self._smodel = ser_model
-
-    def __getattribute__(self, attrname):
-        '''Override load save and predict methods to be used from the serial-model. The
-           serial-model holds references to the weights in the multi-gpu model.
-           '''
-        if 'load' in attrname or 'save' in attrname or 'predict' in attrname:
-            return getattr(self._smodel, attrname)
-        else:
-            #return Model.__getattribute__(self, attrname)
-            return super(ModelMGPU, self).__getattribute__(attrname)
+#from keras import Model
+#class ModelMGPU(Model):
+#    def __init__(self, ser_model, gpus):
+#        pmodel = multi_gpu_model(ser_model, gpus)
+#        self.__dict__.update(pmodel.__dict__)
+#        self._smodel = ser_model
+#
+#    def __getattribute__(self, attrname):
+#        '''Override load save and predict methods to be used from the serial-model. The
+#           serial-model holds references to the weights in the multi-gpu model.
+#           '''
+#        if 'load' in attrname or 'save' in attrname or 'predict' in attrname:
+#            return getattr(self._smodel, attrname)
+#        else:
+#            #return Model.__getattribute__(self, attrname)
+#            return super(ModelMGPU, self).__getattribute__(attrname)
 
 
 
@@ -242,6 +242,18 @@ class training_base(object):
                                **modelargs)
         if not self.keras_model:
             raise Exception('Setting model not successful') 
+
+        
+    def setModel_returnInput(self,model,**modelargs):
+        if len(self.keras_inputs)<1:
+            raise Exception('setup data first') 
+        self.keras_model=model(self.keras_inputs,
+                               self.train_data.getNClassificationTargets(),
+                               self.train_data.getNRegressionTargets(),
+                               **modelargs)
+        if not self.keras_model:
+            raise Exception('Setting model not successful') 
+        return self.keras_inputs
         
     def setGANModel(self, generator_func, discriminator_func):
         '''
@@ -337,7 +349,8 @@ class training_base(object):
                 print(self.discriminator.summary())
                 print('GAN:')
                 print(self.gan.summary())
-        else:    
+        else:
+            print(self.keras_model)
             self.keras_model.compile(optimizer=self.optimizer,metrics=metrics,**compileargs)
             if print_models:
                 print(self.keras_model.summary())
