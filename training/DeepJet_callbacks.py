@@ -7,6 +7,7 @@ from __future__ import print_function
 
 from .ReduceLROnPlateau import ReduceLROnPlateau
 from ..evaluation import plotLoss
+from ..evaluation import plotBatchLoss
 
 from keras.callbacks import Callback, EarlyStopping,History,ModelCheckpoint #, ReduceLROnPlateau # , TensorBoard
 # loss per epoch
@@ -49,6 +50,30 @@ class plot_loss_or_metric(Callback):
             plt.close()
     
 
+class batch_callback_begin(Callback):
+
+    def __init__(self,outputDir,plotLoss=False):
+        self.outputDir=outputDir
+        self.loss=[]
+        self.val_loss=[]
+        self.full_logs=[]
+        self.plotLoss=plotLoss
+
+    def on_batch_end(self,batch,batch_logs={}):
+        import os
+        blossfile=os.path.join( self.outputDir, 'batch_losses.log')
+        self.loss.append(batch_logs.get('loss'))
+        self.val_loss.append(batch_logs.get('val_loss'))
+        f = open(blossfile, 'a')
+        f.write(str(batch_logs.get('loss')))
+        f.write(" ")
+        f.write(str(batch_logs.get('val_loss')))
+        f.write("\n")
+        f.close()
+    def on_epoch_end(self,epoch,epoch_logs={}):
+        plotBatchLoss(self.outputDir+'/batch_losses.log',self.outputDir+'/batch_losses.pdf',[])
+
+
 class newline_callbacks_begin(Callback):
     
     def __init__(self,outputDir,plotLoss=False):
@@ -58,20 +83,6 @@ class newline_callbacks_begin(Callback):
         self.full_logs=[]
         self.plotLoss=plotLoss
         
-
-    def on_batch_end(self,batch,batch_logs={}):
-        import os
-        blossfile=os.path.join( self.outputDir, 'batch_losses.log')
-        print(batch_logs.get('loss'))
-        self.loss.append(batch_logs.get('loss'))
-        self.val_loss.append(batch_logs.get('val_loss'))
-        f = open(blossfile, 'a')
-        f.write(str(batch_logs.get('loss')))
-        f.write(" ")
-        f.write(str(batch_logs.get('val_loss')))
-        f.write("\n")
-        f.close()    
-
 
     def on_epoch_end(self,epoch, epoch_logs={}):
         import os
@@ -169,15 +180,23 @@ class DeepJet_callbacks(object):
                  checkperiod=10,
                  checkperiodoffset=0,
                  plotLossEachEpoch=True, 
-                 additional_plots=None):
+                 additional_plots=None,
+                 batch_loss = False):
         
 
         
         self.nl_begin=newline_callbacks_begin(outputDir,plotLossEachEpoch)
         self.nl_end=newline_callbacks_end()
         
+        
+
         self.callbacks=[self.nl_begin]
         
+        if batch_loss:
+            self.batch_callback=batch_callback_begin(outputDir,plotLossEachEpoch)
+            self.callbacks.append(self.batch_callback)
+        
+
         if minTokenLifetime>0:
             self.tokencheck=checkTokens_callback(minTokenLifetime)
             self.callbacks.append(self.tokencheck)

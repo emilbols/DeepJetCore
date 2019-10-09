@@ -250,7 +250,7 @@ class training_base(object):
         self.keras_model=model(self.keras_inputs,
                                self.train_data.getNClassificationTargets(),
                                self.train_data.getNRegressionTargets(),
-                               **modelargs)
+                               **modelargs)[0]
         if not self.keras_model:
             raise Exception('Setting model not successful') 
         return self.keras_inputs
@@ -440,6 +440,7 @@ class training_base(object):
                    additional_plots=None,
                    additional_callbacks=None,
                    load_in_mem = False,
+                   batch_loss = False,
                    **trainargs):
         
         
@@ -469,7 +470,8 @@ class training_base(object):
                                     outputDir=self.outputDir,
                                     checkperiod=checkperiod,
                                     checkperiodoffset=self.trainedepoches,
-                                    additional_plots=additional_plots)
+                                    additional_plots=additional_plots,
+                                    batch_loss = batch_loss)
         
         if additional_callbacks is not None:
             if not isinstance(additional_callbacks, list):

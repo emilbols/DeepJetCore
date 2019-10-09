@@ -100,11 +100,13 @@ class testDescriptor(object):
             
 
             features=td.x
+            #features_swap = [features[1][:,:6],features[2],features[3][:,0],features[0]]
             #labels=td.y #not needed - maybe we can add this as option so all info is in the output trees (no friends)
             weights=None
             if len(td.w):
                 weights=td.w
             
+            #prediction = model.predict(features_swap)
             prediction = model.predict(features)
             if not isinstance(prediction, list):
                 prediction=[prediction]
@@ -210,6 +212,7 @@ def formatPrediction(self, predicted_list):
 
 
             features=td.x
+            #features_swap = [features[1][:,:6],features[2],features[3][:,0],features[0]]
             labels=td.y
             weights=None
             if td.w is not None and len(td.w):
@@ -217,6 +220,7 @@ def formatPrediction(self, predicted_list):
             
             
             
+            #prediction = model.predict(features_swap)
             prediction = model.predict(features)
             if self.use_only:
                 prediction = [prediction[i] for i in self.use_only]
@@ -566,6 +570,47 @@ def plotLoss(infilename,outfilename,range):
     plt.show()
     #plt.savefig(outfilename, format='pdf') #why does this crash?
     plt.close()
+
+
+def plotBatchLoss(infilename,outfilename,range):
+    
+    import matplotlib
+    #matplotlib.use('Agg') 
+    import matplotlib.pyplot as plt
+    
+    infile=open(infilename,'r')
+    trainloss=[]
+    batch=[]
+    i=0
+    automax=0
+    automin=100
+    nlines=0
+    with open(infilename,'r') as tmpfile:
+        for line in tmpfile:
+            if len(line)<1: continue
+            nlines+=1
+        
+    for line in infile:
+        if len(line)<1: continue
+        tl=float(line.split(' ')[0])
+        trainloss.append(tl)
+        batch.append(i)
+        i=i+1
+        if i - float(nlines)/2. > 1.:
+            automax=max(automax,tl)
+        automin=min(automin,tl)
+        
+    
+    
+    plt.plot(batch,trainloss,'r',label='train')
+    plt.ylabel('loss')
+    plt.xlabel('batch')
+    plt.legend()
+    plt.ylim([0,6.2])
+    plt.show()
+    plt.savefig(outfilename) #why does this crash?
+    plt.close()
+
     
 ######### old part - keep for reference, might be useful some day 
 
